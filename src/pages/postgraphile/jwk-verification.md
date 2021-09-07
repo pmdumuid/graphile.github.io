@@ -135,13 +135,29 @@ const checkJwt = jwt({
   algorithms: ["RS256"],
 });
 
+// Re-format the errors caused by JWT's middlware on HTTP request to respond in the same manner as the graphql standard.
+const authErrors = (err, req, res, next) => {
+  if (err.name === "UnauthorizedError") {
+    console.log(err);
+    res.status(err.status).json({ errors: [{ message: err.message }] });
+    res.end();
+  }
+};
+
 const app = express();
+const websocketMiddlewares = [];
 
 // Apply checkJwt to our graphql endpoint
 app.use("/graphql", checkJwt);
+app.use("/graphql", authErrors);
+
+// Apply checkJwt to the websocket middlewares - this will validate the
+// header, "Authorization" that is sent in the websocket message for connectionParams.
+websocketMiddlewares.push(checkJwt);
 
 app.use(
   postgraphile(process.env.DATABASE_URL, process.env.DB_SCHEMA, {
+    websocketMiddlewares,
     pgSettings: req => {
       const settings = {};
       if (req.user) {
