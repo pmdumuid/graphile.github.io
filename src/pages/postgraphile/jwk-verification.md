@@ -136,12 +136,18 @@ const checkJwt = jwt({
 });
 
 const app = express();
+const websocketMiddlewares = [];
 
 // Apply checkJwt to our graphql endpoint
 app.use("/graphql", checkJwt);
 
+// Apply checkJwt to the websocket middlewares - this will validate the
+// Authorization header that is sent in the websocket message for connectionParams.
+websocketMiddlewares.push(checkJwt);
+
 app.use(
   postgraphile(process.env.DATABASE_URL, process.env.DB_SCHEMA, {
+    websocketMiddlewares,
     pgSettings: req => {
       const settings = {};
       if (req.user) {
